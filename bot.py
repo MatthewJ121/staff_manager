@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 import os
-import requests
+import httpx
 from dotenv import load_dotenv
 
 load_dotenv() # load all the variables from the env file
@@ -23,20 +23,21 @@ async def on_ready():
 @bot.slash_command(guild_ids=guildID, name="viewprofile", description="view the profile of a user")
 async def profile(ctx, username: str):
 
-    userid_request = requests.post("https://users.roblox.com/v1/usernames/users", json={"usernames": [username], "excludeBannedUsers": True}).json()["data"][0]["id"]
-    profile_ref = requests.get(f"https://apis.roblox.com/cloud/v2/users/{userid_request}", headers={"x-api-key":os.getenv("roblox_api")}).json()
+    # get player's uid from their name, handle if no name found
+    userid_request = httpx.post("https://users.roblox.com/v1/usernames/users", json={"usernames": [username], "excludeBannedUsers": True}).json()["data"]
 
-    embed = discord.Embed(title=profile_ref["name"], description="display name:"+profile_ref["displayName"]+" \n locale:"+profile_ref["locale"]+" \n createTime"+profile_ref["createTime"])
+    if len(userid_request) == 0:
+        error_embed = discord.Embed(title="No User Found",description=f"There is no user with the name **{username}**.\nCheck your spelling and try again.")
+        await ctx.respond(embed=error_embed)
+        return
+
+    # get player's profile from uid                      
+    profile_ref = httpx.get("https://apis.roblox.com/cloud/v2/users/"+userid_request[0]["id"], headers={"x-api-key":os.getenv("roblox_api")}).json()
+
+    embed = discord.Embed(
+        title=profile_ref["name"],
+        description="display name:"+profile_ref["displayName"]+" \n locale:"+profile_ref["locale"]+" \n createTime"+profile_ref["createTime"])
     await ctx.respond(embed=embed)
-
-## checks latency
-@bot.slash_command(guild_ids=guildID, name="ping", description="check latency")
-async def ping(ctx):
-    """
-    replies with ping
-    """
-    await ctx.respond(f"your ping is {round(bot.latency * 1000)}ms")
-
 
 ## sends an embed message
 @bot.slash_command(guild_ids=guildID, name="embed", description="my balls")
