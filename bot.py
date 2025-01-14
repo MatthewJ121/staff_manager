@@ -15,7 +15,6 @@ guildID = [1328458609163763804]
 ## prints when the bot is ready
 @bot.event
 async def on_ready():
-    bot.sync_commands()
     print(f"Logged in as {bot.user} (ID: {bot.user.id})")
     print("Bot is ready!")
 
@@ -25,14 +24,10 @@ async def on_ready():
 async def profile(ctx, username: str):
 
     userid_request = requests.post("https://users.roblox.com/v1/usernames/users", json={"usernames": [username], "excludeBannedUsers": True}).json()["data"][0]["id"]
-    profile = requests.get(f"https://apis.roblox.com/cloud/v2/users/{userid_request}", headers={"x-api-key":os.getenv("roblox_api")}).json()
+    profile_ref = requests.get(f"https://apis.roblox.com/cloud/v2/users/{userid_request}", headers={"x-api-key":os.getenv("roblox_api")}).json()
 
-    embed = discord.Embed(
-        title=profile["name"]
-        description=
-        )
+    embed = discord.Embed(title=profile_ref["name"], description="display name:"+profile_ref["displayName"]+" \n locale:"+profile_ref["locale"]+" \n createTime"+profile_ref["createTime"])
     await ctx.respond(embed=embed)
-   
 
 ## checks latency
 @bot.slash_command(guild_ids=guildID, name="ping", description="check latency")
