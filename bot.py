@@ -1,33 +1,41 @@
 import discord
 from discord.ext import commands
 import os
+import requests
 from dotenv import load_dotenv
 
 load_dotenv() # load all the variables from the env file
 bot = discord.Bot()
-
 ######################################################
 
-guildID = 1328458609163763804
+guildID = [1328458609163763804]
 
 ######################################################
 
 ## prints when the bot is ready
 @bot.event
 async def on_ready():
+    bot.sync_commands()
     print(f"Logged in as {bot.user} (ID: {bot.user.id})")
     print("Bot is ready!")
 
 
 ## attempts to replicate viewprofile command from the other bot
-@bot.slash_command(guild_ids=[1328458609163763804], name="viewprofile", description="view the profile of a user")
-async def profile(ctx, *, username: str):
+@bot.slash_command(guild_ids=guildID, name="viewprofile", description="view the profile of a user")
+async def profile(ctx, username: str):
 
-    await ctx.respond(f"Username: {username}")
+    userid_request = requests.post("https://users.roblox.com/v1/usernames/users", json={"usernames": [username], "excludeBannedUsers": True}).json()["data"][0]["id"]
+    profile = requests.get(f"https://apis.roblox.com/cloud/v2/users/{userid_request}", headers={"x-api-key":os.getenv("roblox_api")}).json()
+
+    embed = discord.Embed(
+        title=profile["name"]
+        description=
+        )
+    await ctx.respond(embed=embed)
    
 
 ## checks latency
-@bot.slash_command(guild_ids=[1328458609163763804], name="ping", description="check latency")
+@bot.slash_command(guild_ids=guildID, name="ping", description="check latency")
 async def ping(ctx):
     """
     replies with ping
@@ -36,7 +44,7 @@ async def ping(ctx):
 
 
 ## sends an embed message
-@bot.slash_command(guild_ids=[1328458609163763804], name="embed", description="test embed capabilities")
+@bot.slash_command(guild_ids=guildID, name="embed", description="my balls")
 async def embed_test(ctx):
     """
    tests embeds
