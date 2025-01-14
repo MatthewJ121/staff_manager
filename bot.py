@@ -20,3 +20,4 @@ async def ping(ctx):
 
 
 bot.run(os.getenv('token'))
+#test
