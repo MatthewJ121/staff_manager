@@ -1,2 +1,4 @@
-pycord 
+py-cord 
 python-dotenv
+pymongo
+httpx
