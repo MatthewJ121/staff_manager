@@ -1,20 +1,12 @@
 import discord
-import roblox
-from roblox import Client
-client = Client()
 from discord.ext import commands
 import os
 import httpx
+httpx.Timeout(3)
 from dotenv import load_dotenv
+from datetime import datetime
 
 guildID = [1328458609163763804] # guild id variable so commands update faster
-import datetime
-
-date_format = "%Y-%m-%dT%H:%M:%S.%fZ"
-current_date = datetime.datetime.now()
-print(f"date is {current_date}")
-
-guildID = [1328458609163763804]
 
 load_dotenv() # load all the variables from the env file
 bot = discord.Bot()
@@ -40,46 +32,80 @@ blgroups = [9688364, 10085029, 33263569, 34603205, 34549414, 34941244, 9927554]
 ## prints to console when the bot is ready
 @bot.event
 async def on_ready():
-    #await bot.sync(guild=discord.Object(id=907125046793879602))
     print(f"Logged in as {bot.user} (ID: {bot.user.id})")
     print("the bot has awoken")
 
 
-## attempts to replicate viewprofile command from the other bot
+"""
+command: viewprofile
+access: all users
+input: username/id
+front end: displays embed with basic user info, blacklist status, alt flags, and launches
+back end: pulls information from roblox api and mongodb databases for relevant information, read only
+"""
 @bot.slash_command(guild_ids=guildID, name="viewprofile", description="View the profile of a user.")
 async def profile(ctx, username: str):
 
-    # get player's uid from their name, handle if no name found
-    userid_request = httpx.post("https://users.roblox.com/v1/usernames/users", json={"usernames": [username], "excludeBannedUsers": True}).json()["data"]
-
-    if len(userid_request) == 0:
-        error_embed = discord.Embed(title="No User Found",description=f"There is no user with the name **{username}**.\nCheck your spelling and try again.",color=discord.Color.red())
-        await ctx.respond(embed=error_embed)
-        return
+    try:
+        print(f"input is: {username}")
+        uid = int(username) #checks if input is already a uid
+        print("passed uid")
+    except:
+        # get player's uid if the entry is in string form
+            try:
+                 uid = httpx.post("https://users.roblox.com/v1/usernames/users", json={"usernames": [username], "excludeBannedUsers": True}).json()["data"][0]["id"]
+            except:
+                 uid = 0 #wil cause user not found error in api
 
     # get player's profile from uid                      
-    profile_ref = httpx.get("https://apis.roblox.com/cloud/v2/users/"+str(userid_request[0]["id"]), headers={"x-api-key":(roblox_api)}).json()
+    profile_ref = httpx.get("https://apis.roblox.com/cloud/v2/users/"+str(uid), headers={"x-api-key":(roblox_api)}).json()
 
-    userid_request = requests.post("https://users.roblox.com/v1/usernames/users", json={"usernames": [username], "excludeBannedUsers": True}).json()["data"]
-    profile_ref = requests.get(f"https://apis.roblox.com/cloud/v2/users/{userid_request}", headers={"x-api-key":os.getenv("roblox_api")}).json()
-  
-    creation_date = datetime.datetime.strptime(profile_ref["createTime"], date_format)
-    print(f"AGHHJHHHHHH{creation_date}")
-    creation_date = str(creation_date[0:creation_date.index(" ")])
-    print(creation_date)
-    embed = discord.Embed(
-        title=profile_ref["name"],
-        description="Display Name: "+profile_ref["displayName"]+" \n Locale: "+profile_ref["locale"]+" \n Date Created: "+profile_ref["createTime"], color=discord.Color.green())
-    await ctx.respond(embed=embed)
+    try: #handles ANY error, gives custom more readable message if error is no user found
+        if profile_ref["code"] != "NOT_FOUND":#user not found
+            error_embed = discord.Embed(
+                 title = f'User "{username}" does not exist.',
+                 description=
+                 f"Check your spelling and try again",
+                 color=discord.Color.orange())
+        else:
+            try:
+                 error_embed = discord.Embed(#unrecognized error from API
+                    title = f"API error: {profile_ref["code"]}",
+                    description=
+                    f"{profile_ref["message"]}\n"
+                    f"Please **immediately** report this error to the launch host",
+                    color = discord.Color.red())
+            except:
+                 error_embed = discord.Embed(#failure to retrieve API error, likely due to API being down
+                    title = f"Uknown error",
+                    description=
+                    f"The Roblox API may be down, or another error has occured.\n"
+                    f"Please **immediately** report this error to the launch host",
+                    color = discord.Color.red())
+        await ctx.respond(embed=error_embed)
+    
+    except: #if no error, gives user profile
+        creationDate = datetime.strptime(profile_ref["createTime"], "%Y-%m-%dT%H:%M:%S.%fZ")
+        
+        embed = discord.Embed(
+            title=profile_ref["name"],
+            description=
+            f"Display Name: {profile_ref["displayName"]}\n"
+            f"Account Age: {str(datetime.now() - creationDate).split(",")[0]}", 
+            color=discord.Color.green())
+        await ctx.respond(embed=embed)
 
-## sends an embed message
-@bot.slash_command(guild_ids=guildID, description="test embed capabilities")
+# sends an embed message 
+@bot.slash_command(guild_ids=guildID, name="embed", description="testing")
 async def embed_test(ctx):
+    """
+   tests embeds
+    """
     embed = discord.Embed(title="embed test", description="this is a test embed message", color=discord.Color.green())
     embed.add_field(name="field 1", value="value 1", inline=False)
     embed.set_footer(text="footer text")
     await ctx.respond(embed=embed)
 
+
 ## runs the bot
 bot.run(token)
-#test
