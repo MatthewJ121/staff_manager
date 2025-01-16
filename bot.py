@@ -12,7 +12,7 @@ token = os.getenv('TOKEN')
 roblox_api = os.getenv('roblox_api')
 
 ### MongoDB Handling ###
-
+"""
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 
@@ -21,7 +21,7 @@ mongoclient = MongoClient(uri)
 rdb = mongoclient.SilverOaks.ResidentList
 bdb = mongoclient.SilverOaks.Blacklist
 sdb = mongoclient.SilverOaks.StaffTracker
-
+"""
 blgroups = [9688364, 10085029, 33263569, 34603205, 34549414, 34941244, 9927554]
 
 ### ###
@@ -32,6 +32,8 @@ blgroups = [9688364, 10085029, 33263569, 34603205, 34549414, 34941244, 9927554]
 async def on_ready():
     print(f"Logged in as {bot.user} (ID: {bot.user.id})")
     print("the bot has awoken")
+
+bot.load_extension("plugins.testclass")
 
 
 ## attempts to replicate viewprofile command from the other bot
