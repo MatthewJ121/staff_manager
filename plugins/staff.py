@@ -10,11 +10,11 @@ class Staff(commands.Cog):
 
     staffcmd = discord.SlashCommandGroup("mgmt")
     """
-    command: viewprofile
-    access: all users
-    input: username/id
-    front end: displays embed with basic user info, blacklist status, alt flags, and launches
-    back end: pulls information from roblox api and mongodb databases for relevant information, read only
+    command: suspend
+    access: mgmt
+    input: username/reason/length(#days)
+    front end: suspends x player w/ confirmation modal
+    back end: adds x player to suspension DB, removes appropriate ranks
     """
     @staffcmd.command(guild_ids=[1328458609163763804])
     async def suspend(self, ctx, username: str, reason: str, length: int):
