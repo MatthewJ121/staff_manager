@@ -32,20 +32,20 @@ class Resident(commands.Cog):
         profile_img = None
         try:
             profile_ref = await get_robloxprofile(username)
-            profile_img = await get_picture(profile_ref["id"])
         except Exception as e:
             error_embed = discord.Embed(title="An error occured",description=e,color=discord.Color.red())
             await ctx.respond(embed=error_embed, ephemeral=True)
         
         async with httpx.AsyncClient() as client:
-            so_ranks = await get_rank(profile_ref["id"],"so")
+            profile_img = await get_picture(profile_ref["id"])
             await client.aclose()
             
         async with httpx.AsyncClient() as client:
-            launch_count = await get_db(profile_ref["id"],"rdb")
+            so_ranks = await get_rank(profile_ref["id"],"so")
             await client.aclose()
 
         #create and send embed
+        launch_count = get_db(profile_ref["id"],"rdb")
         embed = discord.Embed(
             title=profile_ref["name"],
             color=discord.Color.dark_green(),
@@ -55,16 +55,19 @@ class Resident(commands.Cog):
         embed.add_field(name="Date Created",value=(datetime.datetime.fromisoformat(profile_ref['createTime'])).strftime('%m/%d/%Y'),inline=True)
         
         if so_ranks != None:
-            rstr = so_ranks[32941073]
+            if 32941073 in so_ranks:
+                rstr = so_ranks[32941073]["name"]
+            else:
+                rstr = "Visitor"
             if 8294909 in so_ranks:
-                if so_ranks[8294909] not in rstr:
-                    rstr = rstr + "\n" + so_ranks[8294909]
+                if so_ranks[8294909]["name"] not in rstr:
+                    rstr = rstr + "\n" + so_ranks[8294909]["name"]
             if 8294866 in so_ranks:
-                if so_ranks[8294866] not in rstr:
-                    rstr = rstr + "\n" + so_ranks[8294866]
+                if so_ranks[8294866]["name"] not in rstr:
+                    rstr = rstr + "\n" + so_ranks[8294866]["name"]
             if 10021698 in so_ranks:
-                if so_ranks[10021698] not in rstr:
-                    rstr = rstr + "\n" + so_ranks[10021698]
+                if so_ranks[10021698]["name"] not in rstr:
+                    rstr = rstr + "\n" + so_ranks[10021698]["name"]
             embed.add_field(name="Ranks",value=rstr,inline=False)
             
         if launch_count != None:

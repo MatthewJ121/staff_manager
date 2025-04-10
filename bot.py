@@ -7,18 +7,18 @@ from dotenv import load_dotenv
 guildID = [1328458609163763804] # guild id variable so commands update faster
 
 load_dotenv() # load all the variables from the env file
-bot = discord.Bot()
+bot = discord.Bot(debug_guilds=[1328458609163763804])
 token = os.getenv('TOKEN')
 roblox_api = os.getenv('roblox_api')
 
 
 blgroups = [9688364, 10085029, 33263569, 34603205, 34549414, 34941244, 9927554]
 
+from plugins.globalfx import *
 ## prints to console when the bot is ready
 @bot.event
 async def on_ready():
-    print(f"Logged in as {bot.user} (ID: {bot.user.id})")
-    print("the bot has awoken")
+    print(f"\033[94mLogged in as {bot.user} (ID: {bot.user.id})\033[0m")
     
 
 ## list of extensions (classes), loads extensions
