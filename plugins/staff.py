@@ -56,9 +56,6 @@ class Staff(commands.Cog):
                     check_embed.add_field(name="Duration",value=str(length)+" Launches",inline=False)
                     suspension = True
 
-                # auto dm
-                message_embed = discord.Embed(title="Notice of Disciplinary Action?",color=discord.Color.dark_red())
-
                 class check_view(discord.ui.View):
                     def __init__(self): # refer to coconut.png
                         super().__init__()
@@ -90,6 +87,47 @@ class Staff(commands.Cog):
                         }
                         #send_db(profile,"susdb")
                         susdb.insert_one(profile)
+
+                        # send dm
+                        if suspension:
+                            message_embed = discord.Embed(
+                                title="Notice of Disciplinary Action",
+                                description=f"""Hello, {username.display_name},
+
+                                Upon review of your recent behavior, it has become apparent that your performance and conduct have not aligned with the expectations and standards that we have for our team members.  You are receiving this message because of the following infraction(s)
+
+                                - {reason}
+
+                                Regrettably, this has led to the decision to **issue a {length} launch suspension**, effective immediately.
+
+                                You may create an appeal [here](https://discord.com/channels/907125046793879602/1164369435545583647) under Class C Appeals if you believe this action was unjust.
+
+                                Sincerely,
+                                {ctx.author.display_name}
+                                """,
+                                color=discord.Color.dark_red())
+                            message_embed.set_footer(text="You will only receive automated messages about Silver Oaks from this bot.\nReport suspcious activity to a Superintendent immediately.")
+                            await username.send(embed=message_embed)
+                        else:
+                            message_embed = discord.Embed(
+                                title="Notice of Disciplinary Action",
+                                description=f"""Hello, {username.display_name},
+
+                                Upon review of your recent behavior, it has become apparent that your performance and conduct have not aligned with the expectations and standards that we have for our team members.  You are receiving this message because of the following infraction(s)
+
+                                - {reason}
+
+                                You are receiving a **written warning** for this infraction.  This incident has been logged on your record.
+                                Further incidents will result in harsher punishments.
+
+                                You may create an appeal [here](https://discord.com/channels/907125046793879602/1164369435545583647) under Class C Appeals if you believe this action was unjust.
+
+                                Sincerely,
+                                {ctx.author.display_name}
+                                """,
+                                color=discord.Color.dark_orange())
+                            message_embed.set_footer(text="You will only receive automated messages about Silver Oaks from this bot.\nReport suspcious activity to a Superintendent immediately.")
+                            await username.send(embed=message_embed)
 
                         if suspension:
                             # remove ranks (pls optimize later)
@@ -138,7 +176,7 @@ class Staff(commands.Cog):
     front end: unsuspends a player and logs reason
     back end: sets active db doc to False, reinstates ranks
     """
-    @staffcmd.command(description="Issues a punishment to the staff member.",guild_ids=[1328458609163763804])
+    @staffcmd.command(description="Manually unsuspends a suspended member.",guild_ids=[1328458609163763804])
     @commands.has_role(1359804131828564028)
     async def unsuspend(self, ctx, username: str, reason: str):
         await ctx.defer()
@@ -158,28 +196,42 @@ class Staff(commands.Cog):
             embed.add_field(name="Reason",value=reason,inline=False)
             await bot.bot.get_channel(1359454889704427603).send(embed=embed)
 
-            susdb.update_one({"$set": {"active": False}})
+            susdb.update_one(suspension_profile,{"$set": {"active": False}})
             # re-give ranks (pls optimize later)
             rank = json.loads(suspension_profile["ranks"])
             print(rank)
-            if 32941073 in rank: #main
+            if '32941073' in rank: #main
                 async with httpx.AsyncClient() as client:
-                    await set_rank(profile_ref["id"],32941073,rank[32941073]["id"])
+                    await set_rank(profile_ref["id"],32941073,rank['32941073']["id"])
                 await client.aclose()
-            if 8294909 in rank: #admin
+            if '8294909' in rank: #admin
                 async with httpx.AsyncClient() as client:
-                    await set_rank(profile_ref["id"],8294909,rank[8294909]["id"])
+                    await set_rank(profile_ref["id"],8294909,rank['8294909']["id"])
                 await client.aclose()
-            if 8294866 in rank: #security
+            if '8294866' in rank: #security
                 async with httpx.AsyncClient() as client:
-                    await set_rank(profile_ref["id"],8294866,rank[8294866]["id"])
+                    await set_rank(profile_ref["id"],8294866,rank['8294866']["id"])
                 await client.aclose()
-            if 10021698 in rank: #relations
+            if '10021698' in rank: #relations
                 async with httpx.AsyncClient() as client:
-                    await set_rank(profile_ref["id"],10021698,rank[10021698]["id"])
+                    await set_rank(profile_ref["id"],10021698,rank['10021698']["id"])
                 await client.aclose()
 
             await ctx.respond(embed=embed)
+
+    """
+    command: unsuspend
+    access: mgmt
+    input: username/reason
+    front end: unsuspends a player and logs reason
+    back end: sets active db doc to False, reinstates ranks
+    """
+    @staffcmd.command(description="Manually adds one launch to a staff member.",guild_ids=[1328458609163763804])
+    @commands.has_role(1359804131828564028)
+    async def add_launch(self, username: str):
+        try:
+            s_profile = 
+            sdb.update_one(suspension_profile,{"$set": {"active": False}})
 
 
 def setup(bot):
