@@ -11,9 +11,6 @@ bot = discord.Bot(debug_guilds=[1328458609163763804])
 token = os.getenv('TOKEN')
 roblox_api = os.getenv('roblox_api')
 
-
-blgroups = [9688364, 10085029, 33263569, 34603205, 34549414, 34941244, 9927554]
-
 from plugins.globalfx import *
 ## prints to console when the bot is ready
 @bot.event

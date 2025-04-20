@@ -178,7 +178,7 @@ class Staff(commands.Cog):
     """
     @staffcmd.command(description="Manually unsuspends a suspended member.",guild_ids=[1328458609163763804])
     @commands.has_role(1359804131828564028)
-    async def unsuspend(self, ctx, username: str, reason: str):
+    async def unsuspend(self, ctx, username: discord.Option(str, description="The roblox username of the target user."), reason: str):
         await ctx.defer()
 
         profile_ref = None
@@ -226,13 +226,44 @@ class Staff(commands.Cog):
     front end: unsuspends a player and logs reason
     back end: sets active db doc to False, reinstates ranks
     """
-    @staffcmd.command(description="Manually adds one launch to a staff member.",guild_ids=[1328458609163763804])
+    @staffcmd.command(description="Manually adds launches to a user's record.  The value can be negative.",guild_ids=[1328458609163763804])
     @commands.has_role(1359804131828564028)
-    async def add_launch(self, username: str):
-        try:
-            s_profile = 
-            sdb.update_one(suspension_profile,{"$set": {"active": False}})
+    @discord.option("username",description="The roblox username of the target employee.")
+    @discord.option("amount",description="The amount of launches to add.  The value can be negative to remove launches.")
+    @discord.option("reason",description="Reason for launch adjustment.")
+    async def adjustlaunches(self, ctx, username: str, amount: int, reason: str):
+        profile_ref = None
+        try: # pull uid
+            profile_ref = await get_robloxprofile(username)
+        except Exception as e:
+            error_embed = discord.Embed(title="An error occured",description=e,color=discord.Color.red())
+            await ctx.respond(embed=error_embed, ephemeral=True)
+        
+        s_profile = sdb.find_one({"userid":profile_ref["id"]})
+        print(s_profile)
+        if s_profile != None: # handle database file
+            try:
+                s_profile = sdb.find_one({"userid":profile_ref["id"]})
+                sdb.update_one(s_profile,{"$set": {"launches": s_profile["launches"]+amount}})
+            except Exception as e:
+                error_embed = discord.Embed(title="An error occured",description=e,color=discord.Color.red())
+                await ctx.respond(embed=error_embed, ephemeral=True)
+            
+            success_embed = discord.Embed(description="✅ Launches adjusted successfully",color=discord.Color.dark_blue())
 
+            log_embed = discord.Embed(title="Launch Record Adjusted",color=discord.Color.dark_blue())
+            log_embed.add_field(name="Employee",value=profile_ref["name"],inline=True)
+            log_embed.add_field(name="Adjuster", value=ctx.author.display_name,inline=True)
+            log_embed.add_field(name="Reason",value=reason,inline=False)
+            log_embed.add_field(name="Amount",value=f"{amount} launches")
+
+            await bot.bot.get_channel(1362703685372739656).send(embed=log_embed)
+            await ctx.respond(embed=success_embed)
+        else: # handle no database file
+            fail_embed = discord.Embed(description="❌ Couldn't find user in database.",color=discord.Color.dark_red())
+            await ctx.respond(embed=fail_embed)
+            
+        
 
 def setup(bot):
     bot.add_cog(Staff(bot))
