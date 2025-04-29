@@ -19,9 +19,12 @@ class Staff(commands.Cog):
     front end: suspends x player w/ confirmation modal
     back end: adds x player to suspension DB, removes appropriate ranks (if length > 0), if executor does not have director rank, only issues warnings
     """
-    @staffcmd.command(description="Issues a punishment to the staff member.",guild_ids=[1328458609163763804])
-    @commands.has_any_role(1359813138983157854,1359804131828564028)
-    async def discipline(self, ctx, username: discord.Member, reason: str, length: int):
+    @staffcmd.command(description="Issues a punishment to the employee.",guild_ids=[1328458609163763804])
+    @commands.has_any_role(1359813138983157854,director_role)
+    @discord.option("username",description="The roblox username of the target employee.")
+    @discord.option("reason",description="Reason for disciplinary action.")
+    @discord.option("length",description="Duration of suspension in launches (input 0 to issue warning only).")
+    async def discipline(self, ctx, username: discord.Member, reason: str, length: int = 0):
         await ctx.defer()
 
         profile_ref = None
@@ -38,7 +41,7 @@ class Staff(commands.Cog):
         if suspension_profile == None and rank != {}:
             # if player's rank is above resident and below FS
             # or if the player is FS and the executor is a director
-            if (rank[32941073]["rank"] > 11 and rank[32941073]["rank"] < 25) or (rank[32941073]["rank"] == 25 and any(role.id == 1359804131828564028 for role in ctx.author.roles)):
+            if (rank[32941073]["rank"] > 11 and rank[32941073]["rank"] < 25) or (rank[32941073]["rank"] == 25 and any(role.id == director_role for role in ctx.author.roles)):
                 picture = None
             
                 async with httpx.AsyncClient() as client:
@@ -52,7 +55,7 @@ class Staff(commands.Cog):
                 check_embed.add_field(name="Reason",value=reason,inline=False)
 
                 suspension = False
-                if length > 0 and any(role.id == 1359804131828564028 for role in ctx.author.roles):
+                if length > 0 and any(role.id == director_role for role in ctx.author.roles):
                     check_embed.add_field(name="Duration",value=str(length)+" Launches",inline=False)
                     suspension = True
 
@@ -77,7 +80,7 @@ class Staff(commands.Cog):
 
                         profile = {
                             "username": str.lower(profile_ref["name"]),
-                            "userid": profile_ref["id"],
+                            "userid": int(profile_ref["id"]),
                             "issuer": str.lower(ctx.author.display_name),
                             "reason": reason,
                             "issuedate": datetime.datetime.now(),
@@ -104,6 +107,7 @@ class Staff(commands.Cog):
 
                                 Sincerely,
                                 {ctx.author.display_name}
+                                {ctx.author.top_role.name}
                                 """,
                                 color=discord.Color.dark_red())
                             message_embed.set_footer(text="You will only receive automated messages about Silver Oaks from this bot.\nReport suspcious activity to a Superintendent immediately.")
@@ -124,6 +128,7 @@ class Staff(commands.Cog):
 
                                 Sincerely,
                                 {ctx.author.display_name}
+                                {ctx.author.top_role.name}
                                 """,
                                 color=discord.Color.dark_orange())
                             message_embed.set_footer(text="You will only receive automated messages about Silver Oaks from this bot.\nReport suspcious activity to a Superintendent immediately.")
@@ -177,8 +182,10 @@ class Staff(commands.Cog):
     back end: sets active db doc to False, reinstates ranks
     """
     @staffcmd.command(description="Manually unsuspends a suspended member.",guild_ids=[1328458609163763804])
-    @commands.has_role(1359804131828564028)
-    async def unsuspend(self, ctx, username: discord.Option(str, description="The roblox username of the target user."), reason: str):
+    @commands.has_role(director_role)
+    @discord.option("username",description="The roblox username of the target employee.")
+    @discord.option("reason",description="Reason for unsuspension.")
+    async def unsuspend(self, ctx, username: str, reason: str):
         await ctx.defer()
 
         profile_ref = None
@@ -188,7 +195,7 @@ class Staff(commands.Cog):
             error_embed = discord.Embed(title="An error occured",description=e,color=discord.Color.red())
             await ctx.respond(embed=error_embed, ephemeral=True)
 
-        suspension_profile = susdb.find_one({"userid": profile_ref["id"], "active": True})
+        suspension_profile = susdb.find_one({"userid": int(profile_ref["id"]), "active": True})
         if suspension_profile != None:
             embed = discord.Embed(title="Employee Manually Reinstated",color=discord.Color.blurple())
             embed.add_field(name="Employee",value=profile_ref["name"],inline=True)
@@ -220,30 +227,29 @@ class Staff(commands.Cog):
             await ctx.respond(embed=embed)
 
     """
-    command: unsuspend
+    command: adjustlaunches
     access: mgmt
-    input: username/reason
-    front end: unsuspends a player and logs reason
-    back end: sets active db doc to False, reinstates ranks
+    input: username/amount/reason
+    front end: adds/removes launches from members
+    back end: adds/removes launches from database document, posts log in appropriate channel
     """
     @staffcmd.command(description="Manually adds launches to a user's record.  The value can be negative.",guild_ids=[1328458609163763804])
-    @commands.has_role(1359804131828564028)
+    @commands.has_role(director_role)
     @discord.option("username",description="The roblox username of the target employee.")
     @discord.option("amount",description="The amount of launches to add.  The value can be negative to remove launches.")
     @discord.option("reason",description="Reason for launch adjustment.")
     async def adjustlaunches(self, ctx, username: str, amount: int, reason: str):
+        await ctx.defer()
         profile_ref = None
-        try: # pull uid
+        try: # pull user profile
             profile_ref = await get_robloxprofile(username)
         except Exception as e:
             error_embed = discord.Embed(title="An error occured",description=e,color=discord.Color.red())
             await ctx.respond(embed=error_embed, ephemeral=True)
         
-        s_profile = sdb.find_one({"userid":profile_ref["id"]})
-        print(s_profile)
+        s_profile = sdb.find_one({"userid":int(profile_ref["id"])})
         if s_profile != None: # handle database file
             try:
-                s_profile = sdb.find_one({"userid":profile_ref["id"]})
                 sdb.update_one(s_profile,{"$set": {"launches": s_profile["launches"]+amount}})
             except Exception as e:
                 error_embed = discord.Embed(title="An error occured",description=e,color=discord.Color.red())
@@ -263,6 +269,122 @@ class Staff(commands.Cog):
             fail_embed = discord.Embed(description="❌ Couldn't find user in database.",color=discord.Color.dark_red())
             await ctx.respond(embed=fail_embed)
             
+    
+    """
+    command: fire
+    access: mgmt
+    input: username/reason
+    front end: what do you think it does lol
+    back end: 
+    """
+    @staffcmd.command(description="Terminates the employment of an employee.",guild_ids=[1328458609163763804])
+    @commands.has_role(director_role)
+    @discord.option("username",description="The roblox username of the target employee.")
+    @discord.option("reason",description="Reason for termination.")
+    async def fire(self, ctx, username: discord.Member, reason: str):
+        await ctx.defer()
+        
+        profile_ref = None
+        try: # pull user profile
+            profile_ref = await get_robloxprofile(username.display_name)
+        except Exception as e:
+            error_embed = discord.Embed(title="An error occured",description=e,color=discord.Color.red())
+            await ctx.respond(embed=error_embed, ephemeral=True)
+        
+        picture = None
+        async with httpx.AsyncClient() as client:
+            picture = await get_picture(profile_ref["id"])
+        await client.aclose()
+
+        rank = await get_rank(profile_ref["id"],"so")
+        if rank != {}:
+            # if player's rank is above resident and below BoD
+            if rank[32941073]["rank"] > 11 and rank[32941073]["rank"] < 26:
+                check_embed = discord.Embed(title="Is this the right person?",color=discord.Color.blurple())
+                check_embed.set_thumbnail(url=picture)
+                check_embed.add_field(name="Employee",value=profile_ref["name"],inline=True)
+                check_embed.add_field(name="Issuer", value=ctx.author.display_name,inline=True)
+                check_embed.add_field(name="Reason",value=reason,inline=False)
+
+                class check_view(discord.ui.View):
+                    def __init__(self): # refer to coconut.png
+                        super().__init__()
+                        self.value = None
+
+                    @discord.ui.button(label="Yes",emoji="✅")
+                    async def yes_callback(self, button: discord.ui.Button, ctx2):
+                        # handle yes
+
+                        # log it
+                        start_embed = check_embed
+                        start_embed.title = "Employee Terminated"
+                        start_embed.color = discord.Color.red()
+
+                        profile = {
+                            "username": str.lower(profile_ref["name"]),
+                            "userid": int(profile_ref["id"]),
+                            "issuer": str.lower(ctx.author.display_name),
+                            "reason": "[EMPLOYMENT TERMINATION] " + reason,
+                            "issuedate": datetime.datetime.now(),
+                            "duration": 0,
+                            "ranks": json.dumps(rank),
+                            "active": False
+                        }
+                        #send_db(profile,"susdb")
+                        susdb.insert_one(profile)
+
+                        # send dm
+                        message_embed = discord.Embed(
+                            title="Notice of Disciplinary Action",
+                            description=f"""Hello, {username.display_name},
+
+                            Upon review of your recent behavior, it has become apparent that your performance and conduct have not aligned with the expectations and standards that we have for our team members.  You are receiving this message because of the following infraction(s)
+
+                            - {reason}
+
+                            Regrettably, this has led to the decision to **terminate your employment**, effective immediately.
+
+                            You may create an appeal [here](https://discord.com/channels/907125046793879602/1164369435545583647) under Class C Appeals if you believe this action was unjust.  You may contact me if you have any questions about this decision.
+
+                            Sincerely,
+                            {ctx.author.display_name}
+                            {ctx.author.top_role.name}
+                            """,
+                            color=discord.Color.dark_red())
+                        message_embed.set_footer(text="You will only receive automated messages about Silver Oaks from this bot.\nReport suspcious activity to a Superintendent immediately.")
+                        await username.send(embed=message_embed)
+
+                        # remove ranks (pls optimize later)
+                        if 32941073 in rank: #main
+                            async with httpx.AsyncClient() as client:
+                                await set_rank(profile_ref["id"],32941073,100749843)
+                            await client.aclose()
+                        if 8294909 in rank: #admin
+                            async with httpx.AsyncClient() as client:
+                                await exile(profile_ref["id"],8294909)
+                            await client.aclose()
+                        if 8294866 in rank: #security
+                            async with httpx.AsyncClient() as client:
+                                await exile(profile_ref["id"],8294866)
+                            await client.aclose()
+                        if 10021698 in rank: #relations
+                            async with httpx.AsyncClient() as client:
+                                await exile(profile_ref["id"],10021698)
+                            await client.aclose()
+
+                        await button.view.message.edit(embed=start_embed, view=None)
+                        self.stop()
+
+                    @discord.ui.button(label="No",emoji="❌")
+                    async def no_callback(self, button: discord.ui.Button, ctx2):
+                        await button.view.message.delete()
+                        self.stop()
+            else:
+                error_embed = discord.Embed(title="An error occured",description="You cannot discipline this member.",color=discord.Color.red())
+                await ctx.respond(embed=error_embed, ephemeral=True)
+
+        cv = check_view()
+        await ctx.respond(embed=check_embed, view=cv)
         
 
 def setup(bot):

@@ -1,12 +1,17 @@
 import os
 import httpx
 import json
+from roblox import Client
+roclient = Client(token=os.getenv("auto_key"))
 roblox_api = os.getenv('roblox_api')
 admin_api = os.getenv('admin_key')
 rel_api = os.getenv('relations_key')
 sec_api = os.getenv('security_key')
-
 egg_key = os.getenv("egg_key")
+
+director_role = 1359804131828564028
+supe_role = 1366693535532711977
+supervisor_role = 1359813138983157854
 
 from pymongo.mongo_client import MongoClient
 uri = (os.getenv('URI'))
@@ -15,6 +20,7 @@ rdb = mongoclient.SilverOaks.ResidentList
 bdb = mongoclient.SilverOaks.Blacklist
 sdb = mongoclient.SilverOaks.StaffTracker
 susdb = mongoclient.SilverOaks.SuspensionTracker
+gbdb = mongoclient.SilverOaks.GroupBlacklist
 
 db_map = {       
     "rdb": rdb,
@@ -31,7 +37,7 @@ async def get_robloxprofile(username):
     if len(userid_request) == 0:
         raise ValueError(f"The username **{username}** was not found.")
     else:
-        profile = httpx.get("https://apis.roblox.com/cloud/v2/users/"+str(userid_request[0]["id"]), headers={"x-api-key":(roblox_api)}).json()
+        profile = httpx.get("https://apis.roblox.com/cloud/v2/users/"+str(userid_request[0]["id"]), headers={"x-api-key":(egg_key)}).json()
         return profile
 
 
@@ -97,5 +103,12 @@ async def get_rank(userid,type):
 async def set_rank(userid, groupid, rankid):
     try:
         print(httpx.patch(f"https://apis.roblox.com/cloud/v2/groups/{groupid}/memberships/{userid}",headers={"Content-Type": "application/json","x-api-key":(egg_key)},data=json.dumps({"role":f"groups/{groupid}/roles/{rankid}"})))
+    except Exception as e:
+        print(e)
+
+async def exile(userid, groupid):
+    try:
+        group = roclient.get_base_group(group_id=groupid)
+        await group.kick_user(user=userid)
     except Exception as e:
         print(e)

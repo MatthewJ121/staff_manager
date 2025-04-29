@@ -68,7 +68,7 @@ class Resident(commands.Cog):
             if 10021698 in so_ranks:
                 if so_ranks[10021698]["name"] not in rstr:
                     rstr = rstr + "\n" + so_ranks[10021698]["name"]
-            embed.add_field(name="Ranks",value=rstr,inline=False)
+            embed.add_field(name="Rank(s)",value=rstr,inline=False)
             
         if launch_count != None:
             embed.add_field(name="Launches Attended",value=int(launch_count["launches"]),inline=False)

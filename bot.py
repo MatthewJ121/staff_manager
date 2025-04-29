@@ -4,8 +4,6 @@ import os
 import httpx
 from dotenv import load_dotenv
 
-guildID = [1328458609163763804] # guild id variable so commands update faster
-
 load_dotenv() # load all the variables from the env file
 bot = discord.Bot(debug_guilds=[1328458609163763804])
 token = os.getenv('TOKEN')
@@ -21,7 +19,8 @@ async def on_ready():
 ## list of extensions (classes), loads extensions
 extnlist = [
     "resident",
-    "staff"
+    "staff",
+    "blacklists"
 ]
 for extn in extnlist:
     bot.load_extension(f"plugins.{extn}")
